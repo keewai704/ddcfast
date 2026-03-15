@@ -47,7 +47,17 @@ jobs:
       image: archlinux:base-devel
     steps:
       - name: Install packaging dependencies
-        run: pacman -Syu --noconfirm --needed git go ddcutil pkgconf
+        run: |
+          set -eu
+          missing=""
+          for pkg in git go ddcutil pkgconf; do
+            if ! pacman -Q "$pkg" >/dev/null 2>&1; then
+              missing="$missing $pkg"
+            fi
+          done
+          if [ -n "$missing" ]; then
+            pacman -Syu --noconfirm $missing
+          fi
 
       - name: Set git defaults
         run: git config --global init.defaultBranch main
