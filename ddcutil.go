@@ -6,6 +6,10 @@ package main
 #include <ddcutil_c_api.h>
 #include <ddcutil_types.h>
 
+#ifdef DDCA_SYSLOG_WARNING
+#define DDCFAST_HAVE_DDCA_INIT 1
+#endif
+
 #ifndef DDCA_SYSLOG_WARNING
 #define DDCA_SYSLOG_WARNING 6
 #endif
@@ -15,11 +19,16 @@ package main
 #endif
 
 static DDCA_Status ddcfast_init(const char* opts) {
+#ifdef DDCFAST_HAVE_DDCA_INIT
 	return ddca_init(
 		opts,
 		DDCA_SYSLOG_WARNING,
 		DDCA_INIT_OPTIONS_DISABLE_CONFIG_FILE
 	);
+#else
+	(void) opts;
+	return 0;
+#endif
 }
 
 #ifdef DDCA_DRM_CONNECTOR_FIELD_SIZE
