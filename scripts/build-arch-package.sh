@@ -27,7 +27,7 @@ cp "$repo_root/packaging/arch/PKGBUILD" "$tmpdir/PKGBUILD"
 
 (
     cd "$tmpdir"
-    PKGVER="$version" PKGREL="$pkgrel" PKGSUM="$pkgsum" SOURCE_PATH="$archive" makepkg -f --nodeps --clean
+    PKGVER="$version" PKGREL="$pkgrel" PKGSUM="$pkgsum" SOURCE_PATH="$archive" makepkg -f --clean
 )
 
 find "$tmpdir" -maxdepth 1 -type f -name '*.pkg.tar.*' -exec mv {} "$output_dir"/ \;

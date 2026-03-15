@@ -6,15 +6,73 @@ package main
 #include <ddcutil_c_api.h>
 #include <ddcutil_types.h>
 
+#ifndef DDCA_SYSLOG_WARNING
+#define DDCA_SYSLOG_WARNING 6
+#endif
+
+#ifndef DDCA_INIT_OPTIONS_DISABLE_CONFIG_FILE
+#define DDCA_INIT_OPTIONS_DISABLE_CONFIG_FILE 1
+#endif
+
 static DDCA_Status ddcfast_init(const char* opts) {
-	return ddca_init2(opts, DDCA_SYSLOG_WARNING, DDCA_INIT_OPTIONS_DISABLE_CONFIG_FILE, NULL);
+	return ddca_init(
+		opts,
+		(DDCA_Syslog_Level) DDCA_SYSLOG_WARNING,
+		(DDCA_Init_Options) DDCA_INIT_OPTIONS_DISABLE_CONFIG_FILE
+	);
 }
 
-static int ddcfast_busno(DDCA_Display_Info2* info) {
+#ifdef DDCA_DRM_CONNECTOR_FIELD_SIZE
+typedef DDCA_Display_Info2 ddcfast_display_info_t;
+
+static DDCA_Status ddcfast_get_display_info(DDCA_Display_Ref dref, ddcfast_display_info_t** info) {
+	return ddca_get_display_info2(dref, info);
+}
+
+static void ddcfast_free_display_info(ddcfast_display_info_t* info) {
+	ddca_free_display_info2(info);
+}
+
+static const char* ddcfast_connector(ddcfast_display_info_t* info) {
+	return info->drm_card_connector;
+}
+#else
+typedef DDCA_Display_Info ddcfast_display_info_t;
+
+static DDCA_Status ddcfast_get_display_info(DDCA_Display_Ref dref, ddcfast_display_info_t** info) {
+	return ddca_get_display_info(dref, info);
+}
+
+static void ddcfast_free_display_info(ddcfast_display_info_t* info) {
+	ddca_free_display_info(info);
+}
+
+static const char* ddcfast_connector(ddcfast_display_info_t* info) {
+	return "";
+}
+#endif
+
+static int ddcfast_busno(ddcfast_display_info_t* info) {
 	if (info->path.io_mode != DDCA_IO_I2C) {
 		return -1;
 	}
 	return info->path.path.i2c_busno;
+}
+
+static int ddcfast_dispno(ddcfast_display_info_t* info) {
+	return info->dispno;
+}
+
+static const char* ddcfast_mfg_id(ddcfast_display_info_t* info) {
+	return info->mfg_id;
+}
+
+static const char* ddcfast_model_name(ddcfast_display_info_t* info) {
+	return info->model_name;
+}
+
+static const char* ddcfast_serial(ddcfast_display_info_t* info) {
+	return info->sn;
 }
 */
 import "C"
@@ -185,25 +243,25 @@ func listDisplaysLocked() ([]displayRef, error) {
 			break
 		}
 
-		var info *C.DDCA_Display_Info2
-		rc = C.ddca_get_display_info2(dref, &info)
+		var info *C.ddcfast_display_info_t
+		rc = C.ddcfast_get_display_info(dref, &info)
 		if rc != 0 {
 			return nil, statusError("read display info", rc)
 		}
 
 		display := displayRef{
 			Display: Display{
-				DisplayNo: int(info.dispno),
+				DisplayNo: int(C.ddcfast_dispno(info)),
 				BusNo:     int(C.ddcfast_busno(info)),
-				Connector: strings.TrimSpace(C.GoString((*C.char)(unsafe.Pointer(&info.drm_card_connector[0])))),
-				MfgID:     strings.TrimSpace(C.GoString((*C.char)(unsafe.Pointer(&info.mfg_id[0])))),
-				Model:     strings.TrimSpace(C.GoString((*C.char)(unsafe.Pointer(&info.model_name[0])))),
-				Serial:    strings.TrimSpace(C.GoString((*C.char)(unsafe.Pointer(&info.sn[0])))),
+				Connector: strings.TrimSpace(C.GoString(C.ddcfast_connector(info))),
+				MfgID:     strings.TrimSpace(C.GoString(C.ddcfast_mfg_id(info))),
+				Model:     strings.TrimSpace(C.GoString(C.ddcfast_model_name(info))),
+				Serial:    strings.TrimSpace(C.GoString(C.ddcfast_serial(info))),
 			},
 			dref: uintptr(unsafe.Pointer(dref)),
 		}
 		displays = append(displays, display)
-		C.ddca_free_display_info2(info)
+		C.ddcfast_free_display_info(info)
 	}
 
 	return displays, nil
@@ -396,7 +454,7 @@ func setFeature(display displayRef, code uint8, value int) error {
 	}
 	defer closeDisplayLocked(handle)
 
-	rc := C.ddca_set_non_table_vcp_value2(
+	rc := C.ddca_set_non_table_vcp_value(
 		handle,
 		C.DDCA_Vcp_Feature_Code(code),
 		C.uint8_t((value>>8)&0xff),
@@ -679,7 +737,7 @@ func (rt *ddcRuntime) writeFeature(display displayRef, code uint8, value int) er
 			return err
 		}
 
-		rc := C.ddca_set_non_table_vcp_value2(
+		rc := C.ddca_set_non_table_vcp_value(
 			C.DDCA_Display_Handle(unsafe.Pointer(handle)),
 			C.DDCA_Vcp_Feature_Code(code),
 			C.uint8_t((value>>8)&0xff),
