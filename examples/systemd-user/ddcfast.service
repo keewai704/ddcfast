@@ -1,0 +1,11 @@
+[Unit]
+Description=ddcfast monitor control daemon
+
+[Service]
+ExecStart=%h/.local/bin/ddcfast serve --config %h/.config/ddcfast/config.json
+Restart=always
+RestartSec=1
+Environment=HOME=%h
+
+[Install]
+WantedBy=default.target

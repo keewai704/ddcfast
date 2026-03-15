@@ -1,0 +1,5 @@
+{
+  "restore_on_start": true,
+  "restore_retry_count": 20,
+  "restore_retry_delay_ms": 500
+}
