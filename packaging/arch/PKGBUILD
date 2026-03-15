@@ -1,0 +1,18 @@
+pkgname=ddcfast
+pkgver=${PKGVER:-0.1.0}
+pkgrel=${PKGREL:-1}
+pkgdesc="Fast DDC/CI monitor control daemon and CLI"
+arch=('x86_64' 'aarch64')
+url="https://github.com/keewai704/ddcfast"
+license=('MIT')
+depends=('ddcutil')
+makedepends=('go' 'pkgconf')
+source=("${SOURCE_PATH:-${url}/archive/refs/tags/v${pkgver}.tar.gz}")
+sha256sums=("${PKGSUM:-SKIP}")
+
+package() {
+  local source_dir
+  source_dir="$(find "${srcdir}" -maxdepth 1 -mindepth 1 -type d -name "${pkgname}*" | head -n1)"
+  cd "${source_dir}"
+  DESTDIR="${pkgdir}" PREFIX=/usr ./scripts/stage-system.sh
+}

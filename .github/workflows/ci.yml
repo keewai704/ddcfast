@@ -1,0 +1,67 @@
+name: ci
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  build-and-deb:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Install native dependencies
+        run: sudo apt-get update && sudo apt-get install -y libddcutil-dev pkg-config
+
+      - name: Validate helper scripts
+        run: |
+          bash -n \
+            scripts/version.sh \
+            scripts/stage-system.sh \
+            scripts/build-deb.sh \
+            scripts/build-arch-package.sh
+
+      - name: Build Go binary
+        run: go build ./...
+
+      - name: Build Debian package
+        run: ./scripts/build-deb.sh
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ddcfast-deb
+          path: dist/*.deb
+
+  arch-package:
+    runs-on: ubuntu-latest
+    container:
+      image: archlinux:base-devel
+    steps:
+      - name: Install packaging dependencies
+        run: pacman -Syu --noconfirm git go ddcutil pkgconf
+
+      - uses: actions/checkout@v4
+
+      - name: Build Arch package
+        run: |
+          useradd -m builder
+          chown -R builder:builder "$PWD"
+          su builder -c './scripts/build-arch-package.sh'
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ddcfast-arch
+          path: dist/*.pkg.tar.*
+
+  nix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+      - run: nix build .#ddcfast
