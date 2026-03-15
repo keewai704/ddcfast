@@ -17,8 +17,8 @@ package main
 static DDCA_Status ddcfast_init(const char* opts) {
 	return ddca_init(
 		opts,
-		(DDCA_Syslog_Level) DDCA_SYSLOG_WARNING,
-		(DDCA_Init_Options) DDCA_INIT_OPTIONS_DISABLE_CONFIG_FILE
+		DDCA_SYSLOG_WARNING,
+		DDCA_INIT_OPTIONS_DISABLE_CONFIG_FILE
 	);
 }
 

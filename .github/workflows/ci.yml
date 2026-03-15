@@ -47,7 +47,7 @@ jobs:
       image: archlinux:base-devel
     steps:
       - name: Install packaging dependencies
-        run: pacman -Syu --noconfirm git go ddcutil pkgconf
+        run: pacman -Syu --noconfirm --needed git go ddcutil pkgconf
 
       - name: Set git defaults
         run: git config --global init.defaultBranch main
@@ -73,12 +73,11 @@ jobs:
 
       - uses: actions/checkout@v6.0.2
 
-      - name: Expand system uid/gid ceiling for Nix users
+      - name: Install Nix
         run: |
-          sudo sed -ri \
-            -e 's/^(SYS_UID_MAX[[:space:]]+).*/\1 65535/' \
-            -e 's/^(SYS_GID_MAX[[:space:]]+).*/\1 65535/' \
-            /etc/login.defs
+          curl -fsSL https://nixos.org/nix/install | sh -s -- --no-daemon
 
-      - uses: cachix/install-nix-action@v31.10.1
-      - run: nix build .#ddcfast
+      - name: Build Nix package
+        run: |
+          . "$HOME/.nix-profile/etc/profile.d/nix.sh"
+          nix --extra-experimental-features 'nix-command flakes' build .#ddcfast
